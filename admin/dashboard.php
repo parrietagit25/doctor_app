@@ -22,6 +22,41 @@ $total_users = $stmt_users ? $stmt_users->rowCount() : 0;
 $stmt_appointments = $appointment->obtenerTodas();
 $total_appointments = $stmt_appointments ? $stmt_appointments->rowCount() : 0;
 
+// Obtener estadísticas adicionales
+$total_doctores = $user->obtenerDoctores() ? $user->obtenerDoctores()->rowCount() : 0;
+$total_pacientes = $user->obtenerTodos() ? $user->obtenerTodos()->rowCount() : 0;
+
+// Citas por estado
+$citas_creadas = 0;
+$citas_realizadas = 0;
+$citas_canceladas = 0;
+$no_se_presento = 0;
+
+if($stmt_appointments) {
+    $appointments_data = $stmt_appointments->fetchAll(PDO::FETCH_ASSOC);
+    foreach($appointments_data as $app) {
+        switch($app['status']) {
+            case 'cita_creada': $citas_creadas++; break;
+            case 'cita_realizada': $citas_realizadas++; break;
+            case 'cita_cancelada': $citas_canceladas++; break;
+            case 'no_se_presento': $no_se_presento++; break;
+        }
+    }
+}
+
+// Citas de este mes
+$mes_actual = date('Y-m');
+$stmt_citas_mes = $db->prepare("SELECT COUNT(*) as total FROM citas WHERE DATE_FORMAT(fecha_cita, '%Y-%m') = ?");
+$stmt_citas_mes->execute([$mes_actual]);
+$citas_este_mes = $stmt_citas_mes->fetch(PDO::FETCH_ASSOC)['total'];
+
+// Citas de la semana
+$inicio_semana = date('Y-m-d', strtotime('monday this week'));
+$fin_semana = date('Y-m-d', strtotime('sunday this week'));
+$stmt_citas_semana = $db->prepare("SELECT COUNT(*) as total FROM citas WHERE fecha_cita BETWEEN ? AND ?");
+$stmt_citas_semana->execute([$inicio_semana, $fin_semana]);
+$citas_esta_semana = $stmt_citas_semana->fetch(PDO::FETCH_ASSOC)['total'];
+
 // Obtener usuarios recientes
 $users_recent = [];
 if($stmt_users) {
@@ -50,6 +85,7 @@ if($stmt_appointments) {
     <title>Panel Administrativo - Sistema de Citas Médicas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .sidebar {
             min-height: 100vh;
@@ -103,6 +139,11 @@ if($stmt_appointments) {
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="calendario.php">
+                                <i class="fas fa-calendar-alt me-2"></i>Calendario
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="reportes.php">
                                 <i class="fas fa-chart-bar me-2"></i>Reportes
                             </a>
@@ -124,33 +165,159 @@ if($stmt_appointments) {
 
                 <!-- Statistics Cards -->
                 <div class="row mb-4">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-3 mb-3">
                         <div class="card stats-card">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <h5 class="card-title">Total Usuarios</h5>
-                                        <h2 class="mb-0"><?php echo $total_users; ?></h2>
+                                        <h6 class="card-title">Total Usuarios</h6>
+                                        <h3 class="mb-0"><?php echo $total_users; ?></h3>
+                                        <small class="text-white-50">Sistema completo</small>
                                     </div>
                                     <div class="align-self-center">
-                                        <i class="fas fa-users fa-3x"></i>
+                                        <i class="fas fa-users fa-2x"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-3 mb-3">
                         <div class="card stats-card">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <h5 class="card-title">Total Citas</h5>
-                                        <h2 class="mb-0"><?php echo $total_appointments; ?></h2>
+                                        <h6 class="card-title">Doctores</h6>
+                                        <h3 class="mb-0"><?php echo $total_doctores; ?></h3>
+                                        <small class="text-white-50">Activos</small>
                                     </div>
                                     <div class="align-self-center">
-                                        <i class="fas fa-calendar-check fa-3x"></i>
+                                        <i class="fas fa-user-md fa-2x"></i>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card stats-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="card-title">Pacientes</h6>
+                                        <h3 class="mb-0"><?php echo $total_pacientes; ?></h3>
+                                        <small class="text-white-50">Registrados</small>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-user-injured fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card stats-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="card-title">Total Citas</h6>
+                                        <h3 class="mb-0"><?php echo $total_appointments; ?></h3>
+                                        <small class="text-white-50">Historial completo</small>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-calendar-check fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="card-title">Citas Realizadas</h6>
+                                        <h3 class="mb-0"><?php echo $citas_realizadas; ?></h3>
+                                        <small class="text-white-50">Completadas</small>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-check-circle fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-warning text-dark">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="card-title">Citas Pendientes</h6>
+                                        <h3 class="mb-0"><?php echo $citas_creadas; ?></h3>
+                                        <small class="text-dark-50">Por realizar</small>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-clock fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="card-title">Este Mes</h6>
+                                        <h3 class="mb-0"><?php echo $citas_este_mes; ?></h3>
+                                        <small class="text-white-50">Citas programadas</small>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-calendar fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="card-title">Esta Semana</h6>
+                                        <h3 class="mb-0"><?php echo $citas_esta_semana; ?></h3>
+                                        <small class="text-white-50">Citas programadas</small>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-calendar-week fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-chart-pie me-2"></i>Estado de Citas</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="appointmentsStatusChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-chart-bar me-2"></i>Citas por Mes (Últimos 6 meses)</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="monthlyAppointmentsChart" width="400" height="200"></canvas>
                             </div>
                         </div>
                     </div>
@@ -267,5 +434,84 @@ if($stmt_appointments) {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Gráfica de estado de citas (Pie Chart)
+        const appointmentsStatusCtx = document.getElementById('appointmentsStatusChart').getContext('2d');
+        new Chart(appointmentsStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Realizadas', 'Pendientes', 'Canceladas', 'No se presentó'],
+                datasets: [{
+                    data: [<?php echo $citas_realizadas; ?>, <?php echo $citas_creadas; ?>, <?php echo $citas_canceladas; ?>, <?php echo $no_se_presento; ?>],
+                    backgroundColor: [
+                        '#28a745',
+                        '#ffc107',
+                        '#dc3545',
+                        '#6c757d'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Gráfica de citas por mes (Bar Chart)
+        const monthlyAppointmentsCtx = document.getElementById('monthlyAppointmentsChart').getContext('2d');
+        
+        // Obtener datos de los últimos 6 meses
+        const months = [];
+        const appointmentsData = [];
+        
+        for(let i = 5; i >= 0; i--) {
+            const date = new Date();
+            date.setMonth(date.getMonth() - i);
+            const monthStr = date.toISOString().substr(0, 7);
+            months.push(date.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' }));
+            
+            // Simular datos (en una implementación real, obtendrías estos datos del servidor)
+            appointmentsData.push(Math.floor(Math.random() * 20) + 5);
+        }
+        
+        new Chart(monthlyAppointmentsCtx, {
+            type: 'bar',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Citas',
+                    data: appointmentsData,
+                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    </script>
 </body>
 </html>

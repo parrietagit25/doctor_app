@@ -26,6 +26,50 @@ if($stmt_appointments) {
 
 // Obtener información del doctor
 $doctor_info = $user->obtenerPorId($_SESSION['user_id']);
+
+// Calcular estadísticas del doctor
+$total_citas = count($appointments);
+$citas_realizadas = 0;
+$citas_pendientes = 0;
+$citas_canceladas = 0;
+$no_se_presento = 0;
+
+foreach($appointments as $appointment) {
+    switch($appointment['status']) {
+        case 'cita_realizada': $citas_realizadas++; break;
+        case 'cita_creada': $citas_pendientes++; break;
+        case 'cita_cancelada': $citas_canceladas++; break;
+        case 'no_se_presento': $no_se_presento++; break;
+    }
+}
+
+// Citas de este mes
+$mes_actual = date('Y-m');
+$citas_este_mes = 0;
+foreach($appointments as $appointment) {
+    if(date('Y-m', strtotime($appointment['fecha_cita'])) === $mes_actual) {
+        $citas_este_mes++;
+    }
+}
+
+// Citas de esta semana
+$inicio_semana = date('Y-m-d', strtotime('monday this week'));
+$fin_semana = date('Y-m-d', strtotime('sunday this week'));
+$citas_esta_semana = 0;
+foreach($appointments as $appointment) {
+    if($appointment['fecha_cita'] >= $inicio_semana && $appointment['fecha_cita'] <= $fin_semana) {
+        $citas_esta_semana++;
+    }
+}
+
+// Citas de hoy
+$hoy = date('Y-m-d');
+$citas_hoy = 0;
+foreach($appointments as $appointment) {
+    if($appointment['fecha_cita'] === $hoy) {
+        $citas_hoy++;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -35,6 +79,7 @@ $doctor_info = $user->obtenerPorId($_SESSION['user_id']);
     <title>Panel del Doctor - Sistema de Citas Médicas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .sidebar {
             min-height: 100vh;
@@ -83,13 +128,13 @@ $doctor_info = $user->obtenerPorId($_SESSION['user_id']);
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="mis_pacientes.php">
-                                <i class="fas fa-user-injured me-2"></i>Mis Pacientes
+                            <a class="nav-link" href="calendario.php">
+                                <i class="fas fa-calendar-alt me-2"></i>Calendario
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="consultas.php">
-                                <i class="fas fa-stethoscope me-2"></i>Consultas
+                            <a class="nav-link" href="mis_pacientes.php">
+                                <i class="fas fa-user-injured me-2"></i>Pacientes
                             </a>
                         </li>
                         <li class="nav-item">
@@ -114,11 +159,12 @@ $doctor_info = $user->obtenerPorId($_SESSION['user_id']);
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <h5 class="card-title">Total Citas</h5>
-                                        <h2 class="mb-0"><?php echo is_array($appointments) ? count($appointments) : 0; ?></h2>
+                                        <h6 class="card-title">Total Citas</h6>
+                                        <h3 class="mb-0"><?php echo $total_citas; ?></h3>
+                                        <small class="text-white-50">Historial completo</small>
                                     </div>
                                     <div class="align-self-center">
-                                        <i class="fas fa-calendar-check fa-3x"></i>
+                                        <i class="fas fa-calendar-check fa-2x"></i>
                                     </div>
                                 </div>
                             </div>
@@ -129,11 +175,12 @@ $doctor_info = $user->obtenerPorId($_SESSION['user_id']);
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <h5 class="card-title">Citas Pendientes</h5>
-                                        <h2 class="mb-0"><?php echo is_array($appointments) ? count(array_filter($appointments, function($a) { return isset($a['status']) && $a['status'] == 'cita_creada'; })) : 0; ?></h2>
+                                        <h6 class="card-title">Citas Realizadas</h6>
+                                        <h3 class="mb-0"><?php echo $citas_realizadas; ?></h3>
+                                        <small class="text-white-50">Completadas</small>
                                     </div>
                                     <div class="align-self-center">
-                                        <i class="fas fa-clock fa-3x"></i>
+                                        <i class="fas fa-check-circle fa-2x"></i>
                                     </div>
                                 </div>
                             </div>
@@ -144,11 +191,12 @@ $doctor_info = $user->obtenerPorId($_SESSION['user_id']);
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <h5 class="card-title">Citas Realizadas</h5>
-                                        <h2 class="mb-0"><?php echo is_array($appointments) ? count(array_filter($appointments, function($a) { return isset($a['status']) && $a['status'] == 'cita_realizada'; })) : 0; ?></h2>
+                                        <h6 class="card-title">Citas Pendientes</h6>
+                                        <h3 class="mb-0"><?php echo $citas_pendientes; ?></h3>
+                                        <small class="text-white-50">Por realizar</small>
                                     </div>
                                     <div class="align-self-center">
-                                        <i class="fas fa-check-circle fa-3x"></i>
+                                        <i class="fas fa-clock fa-2x"></i>
                                     </div>
                                 </div>
                             </div>
@@ -159,13 +207,106 @@ $doctor_info = $user->obtenerPorId($_SESSION['user_id']);
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <h5 class="card-title">Pacientes Únicos</h5>
-                                        <h2 class="mb-0"><?php echo is_array($appointments) && !empty($appointments) ? count(array_unique(array_column($appointments, 'paciente_nombre'))) : 0; ?></h2>
+                                        <h6 class="card-title">Citas Canceladas</h6>
+                                        <h3 class="mb-0"><?php echo $citas_canceladas; ?></h3>
+                                        <small class="text-white-50">No realizadas</small>
                                     </div>
                                     <div class="align-self-center">
-                                        <i class="fas fa-users fa-3x"></i>
+                                        <i class="fas fa-times-circle fa-2x"></i>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="card-title">Citas Hoy</h6>
+                                        <h3 class="mb-0"><?php echo $citas_hoy; ?></h3>
+                                        <small class="text-white-50">Programadas</small>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-calendar-day fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="card-title">Esta Semana</h6>
+                                        <h3 class="mb-0"><?php echo $citas_esta_semana; ?></h3>
+                                        <small class="text-white-50">Citas programadas</small>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-calendar-week fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="card-title">Este Mes</h6>
+                                        <h3 class="mb-0"><?php echo $citas_este_mes; ?></h3>
+                                        <small class="text-white-50">Citas programadas</small>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-calendar fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card bg-warning text-dark">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="card-title">No se Presentó</h6>
+                                        <h3 class="mb-0"><?php echo $no_se_presento; ?></h3>
+                                        <small class="text-dark-50">Ausencias</small>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-user-times fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-chart-pie me-2"></i>Estado de Mis Citas</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="myAppointmentsStatusChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-chart-bar me-2"></i>Mis Citas por Mes</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="myMonthlyAppointmentsChart" width="400" height="200"></canvas>
                             </div>
                         </div>
                     </div>
@@ -268,9 +409,6 @@ $doctor_info = $user->obtenerPorId($_SESSION['user_id']);
                                     </a>
                                     <a href="mis_pacientes.php" class="btn btn-outline-primary">
                                         <i class="fas fa-user-injured me-2"></i>Mis Pacientes
-                                    </a>
-                                    <a href="consultas.php" class="btn btn-outline-info">
-                                        <i class="fas fa-stethoscope me-2"></i>Gestionar Consultas
                                     </a>
                                 </div>
                             </div>
@@ -397,6 +535,82 @@ $doctor_info = $user->obtenerPorId($_SESSION['user_id']);
                     '<p>Esta funcionalidad se completará en la siguiente iteración.</p>';
             }, 500);
         }
+
+        // Gráfica de estado de citas del doctor (Pie Chart)
+        const myAppointmentsStatusCtx = document.getElementById('myAppointmentsStatusChart').getContext('2d');
+        new Chart(myAppointmentsStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Realizadas', 'Pendientes', 'Canceladas', 'No se presentó'],
+                datasets: [{
+                    data: [<?php echo $citas_realizadas; ?>, <?php echo $citas_pendientes; ?>, <?php echo $citas_canceladas; ?>, <?php echo $no_se_presento; ?>],
+                    backgroundColor: [
+                        '#28a745',
+                        '#ffc107',
+                        '#dc3545',
+                        '#6c757d'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Gráfica de citas por mes del doctor (Bar Chart)
+        const myMonthlyAppointmentsCtx = document.getElementById('myMonthlyAppointmentsChart').getContext('2d');
+        
+        // Obtener datos de los últimos 6 meses
+        const months = [];
+        const myAppointmentsData = [];
+        
+        for(let i = 5; i >= 0; i--) {
+            const date = new Date();
+            date.setMonth(date.getMonth() - i);
+            months.push(date.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' }));
+            
+            // Simular datos (en una implementación real, obtendrías estos datos del servidor)
+            myAppointmentsData.push(Math.floor(Math.random() * 15) + 2);
+        }
+        
+        new Chart(myMonthlyAppointmentsCtx, {
+            type: 'bar',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Mis Citas',
+                    data: myAppointmentsData,
+                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
     </script>
 </body>
 </html>

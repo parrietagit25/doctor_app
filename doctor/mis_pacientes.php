@@ -117,17 +117,17 @@ if($_POST && isset($_POST['action'])) {
     }
 }
 
-// Obtener solo pacientes que han tenido citas con este doctor
-$query = "SELECT DISTINCT u.id, u.nombre, u.apellido, u.email, u.identificacion, u.telefono, 
+// Obtener todos los pacientes del sistema
+$query = "SELECT u.id, u.nombre, u.apellido, u.email, u.telefono, u.fecha_registro,
                  COUNT(c.id) as total_citas,
-                 MAX(c.fecha_cita) as ultima_cita
+                 MAX(c.fecha_cita) as ultima_cita,
+                 CASE WHEN COUNT(c.id) > 0 THEN 'Sí' ELSE 'No' END as tiene_citas
           FROM usuarios u
-          INNER JOIN citas c ON u.id = c.paciente_id
+          LEFT JOIN citas c ON u.id = c.paciente_id AND c.doctor_id = :doctor_id
           WHERE u.tipo_usuario = 'paciente' 
           AND u.activo = 1 
-          AND c.doctor_id = :doctor_id
-          GROUP BY u.id, u.nombre, u.apellido, u.email, u.identificacion, u.telefono
-          ORDER BY ultima_cita DESC";
+          GROUP BY u.id, u.nombre, u.apellido, u.email, u.telefono, u.fecha_registro
+          ORDER BY ultima_cita DESC, u.fecha_registro DESC";
 
 $stmt = $db->prepare($query);
 $stmt->bindParam(':doctor_id', $_SESSION['user_id']);
@@ -138,7 +138,7 @@ $stmt->execute();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Pacientes - Sistema de Citas Médicas</title>
+    <title>Pacientes - Sistema de Citas Médicas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -265,13 +265,13 @@ $stmt->execute();
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link active" href="mis_pacientes.php">
-                                <i class="fas fa-user-injured me-2"></i>Mis Pacientes
+                            <a class="nav-link" href="calendario.php">
+                                <i class="fas fa-calendar-alt me-2"></i>Calendario
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="consultas.php">
-                                <i class="fas fa-stethoscope me-2"></i>Consultas
+                            <a class="nav-link active" href="mis_pacientes.php">
+                                <i class="fas fa-user-injured me-2"></i>Pacientes
                             </a>
                         </li>
                         <li class="nav-item">
@@ -286,9 +286,9 @@ $stmt->execute();
             <!-- Main content -->
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">Mis Pacientes</h1>
+                    <h1 class="h2">Pacientes</h1>
                     <div class="d-flex align-items-center gap-2">
-                        <small class="text-muted">Pacientes que han tenido citas contigo</small>
+                        <small class="text-muted">Todos los pacientes del sistema</small>
                         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addPatientModal">
                             <i class="fas fa-plus me-1"></i>Agregar Paciente
                         </button>
@@ -322,20 +322,31 @@ $stmt->execute();
                                 <div class="mt-2">
                                     <span class="badge bg-light text-dark stats-badge">
                                         <i class="fas fa-calendar-check me-1"></i>
-                                        <?php echo $patient['total_citas']; ?> citas
+                                        <?php echo $patient['total_citas']; ?> citas contigo
                                     </span>
+                                    <?php if($patient['tiene_citas'] == 'No'): ?>
+                                        <span class="badge bg-secondary ms-1">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Sin citas contigo
+                                        </span>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <div class="card-body">
                                 <p class="card-text">
-                                    <i class="fas fa-id-card me-2"></i>
-                                    <strong>Identificación:</strong> <?php echo htmlspecialchars($patient['identificacion']); ?><br>
                                     <i class="fas fa-envelope me-2"></i>
                                     <strong>Email:</strong> <?php echo htmlspecialchars($patient['email']); ?><br>
                                     <i class="fas fa-phone me-2"></i>
                                     <strong>Teléfono:</strong> <?php echo htmlspecialchars($patient['telefono']); ?><br>
-                                    <i class="fas fa-calendar me-2"></i>
-                                    <strong>Última cita:</strong> <?php echo date('d/m/Y', strtotime($patient['ultima_cita'])); ?>
+                                    <i class="fas fa-calendar-plus me-2"></i>
+                                    <strong>Registrado:</strong> <?php echo date('d/m/Y', strtotime($patient['fecha_registro'])); ?><br>
+                                    <?php if($patient['ultima_cita']): ?>
+                                        <i class="fas fa-calendar me-2"></i>
+                                        <strong>Última cita contigo:</strong> <?php echo date('d/m/Y', strtotime($patient['ultima_cita'])); ?>
+                                    <?php else: ?>
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>Estado:</strong> <span class="text-muted">Sin citas contigo</span>
+                                    <?php endif; ?>
                                 </p>
                             </div>
                             <div class="card-footer">
@@ -1384,6 +1395,66 @@ $stmt->execute();
                     '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error al cargar los detalles. Intente nuevamente.</div>';
             });
         }
+
+        // Configurar validación de identificación
+        function setupIdentificationValidation() {
+            const identificacionInput = document.getElementById('identificacion');
+            const errorDiv = document.getElementById('identificacion_error');
+            let validationTimeout;
+
+            identificacionInput.addEventListener('input', function() {
+                clearTimeout(validationTimeout);
+                const identificacion = this.value.trim();
+                
+                if (identificacion.length >= 3) { // Validar solo si tiene al menos 3 caracteres
+                    validationTimeout = setTimeout(() => {
+                        validateIdentification(identificacion);
+                    }, 500); // Esperar 500ms después del último input
+                } else {
+                    hideIdentificationError();
+                }
+            });
+        }
+
+        // Validar identificación
+        function validateIdentification(identificacion) {
+            fetch(`validate_identification.php?identificacion=${encodeURIComponent(identificacion)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exists) {
+                        showIdentificationError();
+                    } else {
+                        hideIdentificationError();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    hideIdentificationError();
+                });
+        }
+
+        // Mostrar error de identificación
+        function showIdentificationError() {
+            const identificacionInput = document.getElementById('identificacion');
+            const errorDiv = document.getElementById('identificacion_error');
+            
+            identificacionInput.classList.add('is-invalid');
+            errorDiv.style.display = 'block';
+        }
+
+        // Ocultar error de identificación
+        function hideIdentificationError() {
+            const identificacionInput = document.getElementById('identificacion');
+            const errorDiv = document.getElementById('identificacion_error');
+            
+            identificacionInput.classList.remove('is-invalid');
+            errorDiv.style.display = 'none';
+        }
+
+        // Inicializar validación al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            setupIdentificationValidation();
+        });
     </script>
 </body>
 </html>

@@ -86,6 +86,23 @@ class Appointment {
         return $stmt;
     }
 
+    // Obtener citas por paciente y doctor específico
+    public function obtenerPorPacienteYDoctor($paciente_id, $doctor_id) {
+        $query = "SELECT c.id, c.fecha_cita, c.hora_cita, c.motivo, c.sintomas, c.status, 
+                         c.observaciones_doctor, c.resultados, c.fecha_creacion,
+                         d.nombre as doctor_nombre, d.apellido as doctor_apellido, d.especialidad
+                  FROM " . $this->table_name . " c
+                  LEFT JOIN usuarios d ON c.doctor_id = d.id
+                  WHERE c.paciente_id = :paciente_id AND c.doctor_id = :doctor_id
+                  ORDER BY c.fecha_cita DESC, c.hora_cita DESC";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':paciente_id', $paciente_id);
+        $stmt->bindParam(':doctor_id', $doctor_id);
+        $stmt->execute();
+        return $stmt;
+    }
+
     // Obtener citas por doctor
     public function obtenerPorDoctor($doctor_id) {
         $query = "SELECT c.id, c.fecha_cita, c.hora_cita, c.motivo, c.sintomas, c.status, 
@@ -105,9 +122,11 @@ class Appointment {
     // Obtener una cita por ID
     public function obtenerPorId($id) {
         $query = "SELECT c.id, c.paciente_id, c.doctor_id, c.fecha_cita, c.hora_cita, 
-                         c.motivo, c.sintomas, c.status, c.observaciones_doctor, c.resultados,
+                         c.motivo, c.sintomas, c.status, c.fecha_creacion,
                          p.nombre as paciente_nombre, p.apellido as paciente_apellido, p.email as paciente_email,
-                         d.nombre as doctor_nombre, d.apellido as doctor_apellido, d.especialidad
+                         p.telefono as paciente_telefono,
+                         d.nombre as doctor_nombre, d.apellido as doctor_apellido, d.especialidad,
+                         d.telefono as doctor_telefono
                   FROM " . $this->table_name . " c
                   LEFT JOIN usuarios p ON c.paciente_id = p.id
                   LEFT JOIN usuarios d ON c.doctor_id = d.id
@@ -127,8 +146,7 @@ class Appointment {
             $this->motivo = $row['motivo'];
             $this->sintomas = $row['sintomas'];
             $this->status = $row['status'];
-            $this->observaciones_doctor = $row['observaciones_doctor'];
-            $this->resultados = $row['resultados'];
+            $this->fecha_creacion = $row['fecha_creacion'];
             return $row;
         }
         return false;
@@ -205,6 +223,61 @@ class Appointment {
         }
 
         return $horarios;
+    }
+
+    public function obtenerCitasPorMes($mes, $año) {
+        $query = "SELECT c.id, c.paciente_id, c.doctor_id, c.fecha_cita, c.hora_cita, 
+                         c.motivo, c.sintomas, c.status, c.fecha_creacion,
+                         CONCAT(p.nombre, ' ', p.apellido) as paciente_nombre,
+                         p.apellido as paciente_apellido,
+                         CONCAT(d.nombre, ' ', d.apellido) as doctor_nombre,
+                         d.apellido as doctor_apellido
+                  FROM citas c
+                  INNER JOIN usuarios p ON c.paciente_id = p.id
+                  INNER JOIN usuarios d ON c.doctor_id = d.id
+                  WHERE MONTH(c.fecha_cita) = :month 
+                  AND YEAR(c.fecha_cita) = :year
+                  ORDER BY c.fecha_cita, c.hora_cita";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':month', $mes, PDO::PARAM_INT);
+        $stmt->bindParam(':year', $año, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $citas = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $dia = (int)date('j', strtotime($row['fecha_cita']));
+            $citas[$dia][] = $row;
+        }
+
+        return $citas;
+    }
+
+    public function obtenerCitasPorMesDoctor($doctorId, $mes, $año) {
+        $query = "SELECT c.id, c.paciente_id, c.doctor_id, c.fecha_cita, c.hora_cita, 
+                         c.motivo, c.sintomas, c.status, c.fecha_creacion,
+                         CONCAT(p.nombre, ' ', p.apellido) as paciente_nombre,
+                         p.apellido as paciente_apellido
+                  FROM citas c
+                  INNER JOIN usuarios p ON c.paciente_id = p.id
+                  WHERE c.doctor_id = :doctor_id
+                  AND MONTH(c.fecha_cita) = :month 
+                  AND YEAR(c.fecha_cita) = :year
+                  ORDER BY c.fecha_cita, c.hora_cita";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':doctor_id', $doctorId, PDO::PARAM_INT);
+        $stmt->bindParam(':month', $mes, PDO::PARAM_INT);
+        $stmt->bindParam(':year', $año, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $citas = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $dia = (int)date('j', strtotime($row['fecha_cita']));
+            $citas[$dia][] = $row;
+        }
+
+        return $citas;
     }
 }
 ?>

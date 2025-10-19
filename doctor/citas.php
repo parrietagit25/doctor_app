@@ -43,7 +43,33 @@ $stmt = $appointment->obtenerPorDoctor($_SESSION['user_id']);
     <title>Mis Citas - Sistema de Citas Médicas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <style>
+        /* Estilos para Select2 en modales */
+        .select2-container {
+            width: 100% !important;
+        }
+        
+        .select2-container--bootstrap-5 .select2-selection {
+            min-height: 38px;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+        }
+        
+        .select2-container--bootstrap-5 .select2-selection--single {
+            height: 38px;
+        }
+        
+        .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+            line-height: 36px;
+            padding-left: 12px;
+        }
+        
+        .select2-dropdown {
+            z-index: 9999 !important;
+        }
+        
         .sidebar {
             min-height: 100vh;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -81,13 +107,13 @@ $stmt = $appointment->obtenerPorDoctor($_SESSION['user_id']);
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="mis_pacientes.php">
-                                <i class="fas fa-user-injured me-2"></i>Mis Pacientes
+                            <a class="nav-link" href="calendario.php">
+                                <i class="fas fa-calendar-alt me-2"></i>Calendario
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="consultas.php">
-                                <i class="fas fa-stethoscope me-2"></i>Consultas
+                            <a class="nav-link" href="mis_pacientes.php">
+                                <i class="fas fa-user-injured me-2"></i>Pacientes
                             </a>
                         </li>
                         <li class="nav-item">
@@ -226,13 +252,17 @@ $stmt = $appointment->obtenerPorDoctor($_SESSION['user_id']);
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="paciente_id" class="form-label">Paciente *</label>
-                                <div class="input-group">
-                                    <select class="form-control" id="paciente_id" name="paciente_id" required>
-                                        <option value="">Seleccionar paciente...</option>
-                                    </select>
-                                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#registerPatientModal">
-                                        <i class="fas fa-user-plus"></i>
+                                <label for="paciente_search" class="form-label">Paciente *</label>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control" id="paciente_search" placeholder="Buscar paciente..." autocomplete="off">
+                                    <input type="hidden" id="paciente_id" name="paciente_id" required>
+                                    <div id="paciente_dropdown" class="dropdown-menu w-100" style="display: none; max-height: 200px; overflow-y: auto;">
+                                        <!-- Opciones de pacientes aparecerán aquí -->
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#registerPatientModal">
+                                        <i class="fas fa-user-plus me-1"></i>Registrar Nuevo Paciente
                                     </button>
                                 </div>
                             </div>
@@ -312,13 +342,25 @@ $stmt = $appointment->obtenerPorDoctor($_SESSION['user_id']);
         </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         // Cargar datos al inicializar la página
         document.addEventListener('DOMContentLoaded', function() {
-            loadPatients();
             setupDateRestrictions();
             setupIdentificationValidation();
+            
+            // Inicializar Select2 cuando se abre el modal
+            const createAppointmentModal = document.getElementById('createAppointmentModal');
+            createAppointmentModal.addEventListener('shown.bs.modal', function () {
+                // Destruir Select2 si ya existe
+                if ($('#paciente_id').hasClass('select2-hidden-accessible')) {
+                    $('#paciente_id').select2('destroy');
+                }
+                // Inicializar Select2
+                loadPatients();
+            });
         });
 
         function viewAppointment(appointmentId) {
@@ -394,24 +436,101 @@ $stmt = $appointment->obtenerPorDoctor($_SESSION['user_id']);
             errorDiv.style.display = 'none';
         }
 
-        // Cargar pacientes
+        // Autocompletado personalizado para pacientes
         function loadPatients() {
-            fetch('get_patients.php')
-                .then(response => response.json())
-                .then(data => {
-                    const select = document.getElementById('paciente_id');
-                    select.innerHTML = '<option value="">Seleccionar paciente...</option>';
-                    data.forEach(patient => {
-                        const option = document.createElement('option');
-                        option.value = patient.id;
-                        const displayText = patient.identificacion ? 
-                            `${patient.nombre} ${patient.apellido} - ${patient.identificacion}` :
-                            `${patient.nombre} ${patient.apellido} - ${patient.email}`;
-                        option.textContent = displayText;
-                        select.appendChild(option);
+            console.log('Inicializando autocompletado para pacientes...');
+            const searchInput = document.getElementById('paciente_search');
+            const hiddenInput = document.getElementById('paciente_id');
+            const dropdown = document.getElementById('paciente_dropdown');
+            
+            if (!searchInput || !hiddenInput || !dropdown) {
+                console.error('Elementos del autocompletado no encontrados');
+                return;
+            }
+
+            let searchTimeout;
+            let currentPatients = [];
+
+            // Función para buscar pacientes
+            function searchPatients(query) {
+                if (query.length < 2) {
+                    dropdown.style.display = 'none';
+                    return;
+                }
+
+                fetch(`search_patients.php?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        currentPatients = data.results || [];
+                        displayPatients(currentPatients);
+                    })
+                    .catch(error => {
+                        console.error('Error al buscar pacientes:', error);
+                        dropdown.innerHTML = '<div class="dropdown-item text-danger">Error al buscar pacientes</div>';
+                        dropdown.style.display = 'block';
                     });
-                })
-                .catch(error => console.error('Error:', error));
+            }
+
+            // Función para mostrar pacientes en el dropdown
+            function displayPatients(patients) {
+                if (patients.length === 0) {
+                    dropdown.innerHTML = '<div class="dropdown-item text-muted">No se encontraron pacientes</div>';
+                } else {
+                    dropdown.innerHTML = patients.map(patient => `
+                        <div class="dropdown-item patient-option" data-id="${patient.id}" data-name="${patient.text}">
+                            <div class="fw-bold">${patient.text}</div>
+                            <small class="text-muted">ID: ${patient.identificacion} | Tel: ${patient.telefono}</small>
+                        </div>
+                    `).join('');
+                }
+                dropdown.style.display = 'block';
+            }
+
+            // Event listener para el input de búsqueda
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                const query = this.value.trim();
+                
+                if (query.length >= 2) {
+                    searchTimeout = setTimeout(() => {
+                        searchPatients(query);
+                    }, 300);
+                } else {
+                    dropdown.style.display = 'none';
+                    hiddenInput.value = '';
+                }
+            });
+
+            // Event listener para seleccionar un paciente
+            dropdown.addEventListener('click', function(e) {
+                const option = e.target.closest('.patient-option');
+                if (option) {
+                    const patientId = option.dataset.id;
+                    const patientName = option.dataset.name;
+                    
+                    searchInput.value = patientName;
+                    hiddenInput.value = patientId;
+                    dropdown.style.display = 'none';
+                    
+                    console.log('Paciente seleccionado:', patientName, 'ID:', patientId);
+                }
+            });
+
+            // Ocultar dropdown al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                }
+            });
+
+            // Mostrar dropdown al hacer foco en el input
+            searchInput.addEventListener('focus', function() {
+                if (this.value.length >= 2 && currentPatients.length > 0) {
+                    dropdown.style.display = 'block';
+                }
+            });
+
+            console.log('Autocompletado inicializado correctamente');
         }
 
         // Configurar restricciones de fecha
@@ -495,7 +614,8 @@ $stmt = $appointment->obtenerPorDoctor($_SESSION['user_id']);
             .then(data => {
                 if (data.success) {
                     alert('Paciente registrado exitosamente');
-                    loadPatients(); // Recargar lista de pacientes
+                    // Seleccionar el nuevo paciente en el autocompletado
+                    document.getElementById('paciente_search').value = data.patient_name;
                     document.getElementById('paciente_id').value = data.patient_id;
                     bootstrap.Modal.getInstance(document.getElementById('registerPatientModal')).hide();
                 } else {

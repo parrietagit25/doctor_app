@@ -118,7 +118,7 @@ class User {
 
     // Obtener todos los usuarios
     public function obtenerTodos() {
-        $query = "SELECT id, nombre, apellido, email, telefono, tipo_usuario, especialidad, fecha_registro 
+        $query = "SELECT id, nombre, apellido, email, identificacion, telefono, tipo_usuario, especialidad, fecha_registro 
                   FROM " . $this->table_name . " 
                   WHERE activo = 1 
                   ORDER BY fecha_registro DESC";
@@ -130,7 +130,7 @@ class User {
 
     // Obtener doctores
     public function obtenerDoctores() {
-        $query = "SELECT id, nombre, apellido, email, especialidad 
+        $query = "SELECT id, nombre, apellido, email, identificacion, especialidad 
                   FROM " . $this->table_name . " 
                   WHERE tipo_usuario = 'doctor' AND activo = 1 
                   ORDER BY nombre";
@@ -142,7 +142,7 @@ class User {
 
     // Obtener un usuario por ID
     public function obtenerPorId($id) {
-        $query = "SELECT id, nombre, apellido, email, telefono, tipo_usuario, especialidad 
+        $query = "SELECT id, nombre, apellido, email, identificacion, telefono, tipo_usuario, especialidad 
                   FROM " . $this->table_name . " 
                   WHERE id = :id AND activo = 1";
 
@@ -156,6 +156,7 @@ class User {
             $this->nombre = $row['nombre'];
             $this->apellido = $row['apellido'];
             $this->email = $row['email'];
+            $this->identificacion = $row['identificacion'];
             $this->telefono = $row['telefono'];
             $this->tipo_usuario = $row['tipo_usuario'];
             $this->especialidad = $row['especialidad'];

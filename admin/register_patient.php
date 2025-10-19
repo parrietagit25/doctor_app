@@ -39,7 +39,13 @@ if($_POST && isset($_POST['action']) && $_POST['action'] === 'register_patient')
     $patient_id = $user->crearPaciente();
     
     if($patient_id) {
-        echo json_encode(['success' => true, 'patient_id' => $patient_id, 'message' => 'Paciente registrado exitosamente']);
+        $patient_name = $user->nombre . ' ' . $user->apellido . ' - ' . ($user->identificacion ?: $user->email);
+        echo json_encode([
+            'success' => true, 
+            'patient_id' => $patient_id,
+            'patient_name' => $patient_name,
+            'message' => 'Paciente registrado exitosamente'
+        ]);
     } else {
         echo json_encode(['success' => false, 'message' => 'Error al registrar el paciente. El email podría estar en uso.']);
     }

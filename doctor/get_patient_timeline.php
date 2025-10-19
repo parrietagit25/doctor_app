@@ -32,44 +32,44 @@ try {
         exit;
     }
     
-    // Obtener historial médico (solo del doctor actual)
+    // Obtener historial médico (TODOS los doctores)
     $medicalHistory = new MedicalHistory($db);
-    $stmt_history = $medicalHistory->obtenerPorPacienteYDoctor($patient_id, $doctor_id);
+    $stmt_history = $medicalHistory->obtenerPorPaciente($patient_id);
     $historial_medico = $stmt_history->fetchAll(PDO::FETCH_ASSOC);
     
-    // Obtener citas médicas (solo del doctor actual)
+    // Obtener citas médicas (TODOS los doctores)
     $appointment = new Appointment($db);
-    $stmt_appointments = $appointment->obtenerPorPacienteYDoctor($patient_id, $doctor_id);
+    $stmt_appointments = $appointment->obtenerPorPaciente($patient_id);
     $citas = $stmt_appointments->fetchAll(PDO::FETCH_ASSOC);
     
-    // Obtener imágenes médicas (solo del doctor actual)
+    // Obtener imágenes médicas (TODOS los doctores)
     $stmt_images = $db->prepare("
         SELECT hmi.*, u.nombre as usuario_nombre, u.apellido as usuario_apellido,
-               hm.fecha_consulta, p.nombre as paciente_nombre, p.apellido as paciente_apellido
+               hm.fecha_consulta, p.nombre as paciente_nombre, p.apellido as paciente_apellido,
+               d.nombre as doctor_nombre, d.apellido as doctor_apellido
         FROM historial_medico_imagenes hmi
         LEFT JOIN usuarios u ON hmi.subido_por = u.id
         LEFT JOIN historial_medico hm ON hmi.historial_medico_id = hm.id
         LEFT JOIN usuarios p ON hm.paciente_id = p.id
-        WHERE hm.paciente_id = :paciente_id AND hm.doctor_id = :doctor_id
+        LEFT JOIN usuarios d ON hm.doctor_id = d.id
+        WHERE hm.paciente_id = :paciente_id
         ORDER BY hmi.fecha_subida DESC
     ");
     $stmt_images->bindParam(':paciente_id', $patient_id);
-    $stmt_images->bindParam(':doctor_id', $doctor_id);
     $stmt_images->execute();
     $imagenes = $stmt_images->fetchAll(PDO::FETCH_ASSOC);
     
-    // Obtener cotizaciones (solo del doctor actual)
+    // Obtener cotizaciones (TODOS los doctores)
     $stmt_cotizaciones = $db->prepare("
         SELECT c.*, p.nombre as paciente_nombre, p.apellido as paciente_apellido,
                d.nombre as doctor_nombre, d.apellido as doctor_apellido, d.especialidad
         FROM cotizaciones c
         LEFT JOIN usuarios p ON c.paciente_id = p.id
         LEFT JOIN usuarios d ON c.doctor_id = d.id
-        WHERE c.paciente_id = :paciente_id AND c.doctor_id = :doctor_id
+        WHERE c.paciente_id = :paciente_id
         ORDER BY c.fecha_creacion DESC
     ");
     $stmt_cotizaciones->bindParam(':paciente_id', $patient_id);
-    $stmt_cotizaciones->bindParam(':doctor_id', $doctor_id);
     $stmt_cotizaciones->execute();
     $cotizaciones = $stmt_cotizaciones->fetchAll(PDO::FETCH_ASSOC);
     
@@ -224,7 +224,7 @@ try {
     echo '<h6 class="mb-0"><i class="fas fa-user me-2"></i>Paciente: ' . htmlspecialchars($patient['nombre'] . ' ' . $patient['apellido']) . '</h6>';
     echo '</div>';
     echo '<div class="card-body">';
-    echo '<p class="text-muted mb-0">Timeline cronológico de todos los registros médicos y citas (solo sus registros).</p>';
+    echo '<p class="text-muted mb-0">Timeline cronológico completo de todos los registros médicos, citas e información del paciente.</p>';
     echo '</div>';
     echo '</div>';
     echo '</div>';

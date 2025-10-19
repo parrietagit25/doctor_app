@@ -100,6 +100,25 @@ class MedicalHistory {
         return $stmt;
     }
 
+    // Obtener historial médico por paciente y doctor específico
+    public function obtenerPorPacienteYDoctor($paciente_id, $doctor_id) {
+        $query = "SELECT h.id, h.paciente_id, h.doctor_id, h.cita_id, h.diagnostico, h.tratamiento, 
+                         h.medicamentos, h.notas_adicionales, h.fecha_consulta,
+                         p.nombre as paciente_nombre, p.apellido as paciente_apellido,
+                         d.nombre as doctor_nombre, d.apellido as doctor_apellido, d.especialidad
+                  FROM " . $this->table_name . " h
+                  LEFT JOIN usuarios p ON h.paciente_id = p.id
+                  LEFT JOIN usuarios d ON h.doctor_id = d.id
+                  WHERE h.paciente_id = :paciente_id AND h.doctor_id = :doctor_id
+                  ORDER BY h.fecha_consulta DESC";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':paciente_id', $paciente_id);
+        $stmt->bindParam(':doctor_id', $doctor_id);
+        $stmt->execute();
+        return $stmt;
+    }
+
     // Obtener un registro específico del historial
     public function obtenerPorId($id) {
         $query = "SELECT h.id, h.paciente_id, h.doctor_id, h.cita_id, h.diagnostico, h.tratamiento, 

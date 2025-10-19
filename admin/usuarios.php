@@ -123,6 +123,11 @@ $stmt = $user->obtenerTodos();
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="calendario.php">
+                                <i class="fas fa-calendar-alt me-2"></i>Calendario
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="reportes.php">
                                 <i class="fas fa-chart-bar me-2"></i>Reportes
                             </a>

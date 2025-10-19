@@ -26,18 +26,7 @@ $medicalHistory = new MedicalHistory($db);
 $message = '';
 $error = '';
 
-// Verificar que el doctor ha tenido citas con este paciente
-$verify_query = "SELECT COUNT(*) as total FROM citas WHERE paciente_id = :paciente_id AND doctor_id = :doctor_id";
-$verify_stmt = $db->prepare($verify_query);
-$verify_stmt->bindParam(':paciente_id', $patient_id);
-$verify_stmt->bindParam(':doctor_id', $_SESSION['user_id']);
-$verify_stmt->execute();
-$verify_result = $verify_stmt->fetch(PDO::FETCH_ASSOC);
-
-if($verify_result['total'] == 0) {
-    header('Location: mis_pacientes.php');
-    exit();
-}
+// Los doctores pueden ver información médica de cualquier paciente
 
 // Obtener información del paciente
 $patient_data = $user->obtenerPorId($patient_id);
@@ -55,16 +44,11 @@ if($patient_data->tipo_usuario !== 'paciente') {
 // Obtener información médica del paciente
 $medical_data = $patientInfo->obtenerPorPaciente($patient_id);
 
-// Obtener historial médico del paciente (solo las consultas de este doctor)
-$history_stmt = $medicalHistory->obtenerPorDoctor($_SESSION['user_id']);
+// Obtener historial médico del paciente (TODOS los doctores)
+$history_stmt = $medicalHistory->obtenerPorPaciente($patient_id);
 $history_records = [];
 if($history_stmt) {
-    while($row = $history_stmt->fetch(PDO::FETCH_ASSOC)) {
-        // Filtrar solo los registros de este paciente
-        if($row['paciente_id'] == $patient_id) {
-            $history_records[] = $row;
-        }
-    }
+    $history_records = $history_stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 // Procesar formularios
@@ -170,11 +154,6 @@ if($_POST) {
                         <li class="nav-item">
                             <a class="nav-link" href="mis_pacientes.php">
                                 <i class="fas fa-user-injured me-2"></i>Mis Pacientes
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="consultas.php">
-                                <i class="fas fa-stethoscope me-2"></i>Consultas
                             </a>
                         </li>
                         <li class="nav-item">
@@ -342,7 +321,7 @@ if($_POST) {
                     <div class="card-header bg-warning text-dark">
                         <h5 class="mb-0">
                             <i class="fas fa-history me-2"></i>
-                            Historial de Consultas (Solo tus consultas)
+                            Historial Médico
                         </h5>
                     </div>
                     <div class="card-body">
