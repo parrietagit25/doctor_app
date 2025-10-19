@@ -1,0 +1,21 @@
+{
+    "name": "doctor-app/cotizaciones",
+    "description": "Sistema de gestión médica con generación de cotizaciones en PDF",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "dompdf/dompdf": "^2.0",
+        "mpdf/mpdf": "^8.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "DoctorApp\\": "classes/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

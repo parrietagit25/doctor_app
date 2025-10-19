@@ -110,6 +110,9 @@ $stmt = $appointment->obtenerTodas();
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     <h1 class="h2">Gestión de Citas</h1>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createAppointmentModal">
+                        <i class="fas fa-plus me-2"></i>Nueva Cita
+                    </button>
                 </div>
 
                 <?php if($message): ?>
@@ -221,8 +224,120 @@ $stmt = $appointment->obtenerTodas();
         </div>
     </div>
 
+    <!-- Create Appointment Modal -->
+    <div class="modal fade" id="createAppointmentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="createAppointmentForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Crear Nueva Cita</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="paciente_id" class="form-label">Paciente *</label>
+                                <div class="input-group">
+                                    <select class="form-control" id="paciente_id" name="paciente_id" required>
+                                        <option value="">Seleccionar paciente...</option>
+                                    </select>
+                                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#registerPatientModal">
+                                        <i class="fas fa-user-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="doctor_id" class="form-label">Doctor *</label>
+                                <select class="form-control" id="doctor_id" name="doctor_id" required>
+                                    <option value="">Seleccionar doctor...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="fecha_cita" class="form-label">Fecha de la Cita *</label>
+                                <input type="date" class="form-control" id="fecha_cita" name="fecha_cita" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="hora_cita" class="form-label">Hora de la Cita *</label>
+                                <select class="form-control" id="hora_cita" name="hora_cita" required>
+                                    <option value="">Seleccionar hora...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="motivo" class="form-label">Motivo de la Consulta *</label>
+                            <textarea class="form-control" id="motivo" name="motivo" rows="3" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="sintomas" class="form-label">Síntomas (Opcional)</label>
+                            <textarea class="form-control" id="sintomas" name="sintomas" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Crear Cita</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Patient Modal -->
+    <div class="modal fade" id="registerPatientModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="registerPatientForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Registrar Nuevo Paciente</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="nombre_paciente" class="form-label">Nombre *</label>
+                                <input type="text" class="form-control" id="nombre_paciente" name="nombre" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="apellido_paciente" class="form-label">Apellido *</label>
+                                <input type="text" class="form-control" id="apellido_paciente" name="apellido" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="identificacion_paciente" class="form-label">Identificación *</label>
+                            <input type="text" class="form-control" id="identificacion_paciente" name="identificacion" required>
+                            <div id="identificacion_error" class="invalid-feedback" style="display: none;">
+                                Esta identificación ya está registrada
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email_paciente" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email_paciente" name="email">
+                        </div>
+                        <div class="mb-3">
+                            <label for="telefono_paciente" class="form-label">Teléfono</label>
+                            <input type="tel" class="form-control" id="telefono_paciente" name="telefono">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Registrar Paciente</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Cargar datos al inicializar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPatients();
+            loadDoctors();
+            setupDateRestrictions();
+            setupIdentificationValidation();
+        });
+
         function viewAppointment(appointmentId) {
             // This would typically load appointment details via AJAX
             alert('Ver detalles de la cita ID: ' + appointmentId + '\nEsta funcionalidad se completará en la siguiente iteración.');
@@ -235,6 +350,192 @@ $stmt = $appointment->obtenerTodas();
             var updateModal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
             updateModal.show();
         }
+
+        // Configurar validación de identificación
+        function setupIdentificationValidation() {
+            const identificacionInput = document.getElementById('identificacion_paciente');
+            const errorDiv = document.getElementById('identificacion_error');
+            let validationTimeout;
+
+            identificacionInput.addEventListener('input', function() {
+                clearTimeout(validationTimeout);
+                const identificacion = this.value.trim();
+                
+                if (identificacion.length >= 3) { // Validar solo si tiene al menos 3 caracteres
+                    validationTimeout = setTimeout(() => {
+                        validateIdentification(identificacion);
+                    }, 500); // Esperar 500ms después del último input
+                } else {
+                    hideIdentificationError();
+                }
+            });
+        }
+
+        // Validar identificación
+        function validateIdentification(identificacion) {
+            fetch(`validate_identification.php?identificacion=${encodeURIComponent(identificacion)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exists) {
+                        showIdentificationError();
+                    } else {
+                        hideIdentificationError();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    hideIdentificationError();
+                });
+        }
+
+        // Mostrar error de identificación
+        function showIdentificationError() {
+            const identificacionInput = document.getElementById('identificacion_paciente');
+            const errorDiv = document.getElementById('identificacion_error');
+            
+            identificacionInput.classList.add('is-invalid');
+            errorDiv.style.display = 'block';
+        }
+
+        // Ocultar error de identificación
+        function hideIdentificationError() {
+            const identificacionInput = document.getElementById('identificacion_paciente');
+            const errorDiv = document.getElementById('identificacion_error');
+            
+            identificacionInput.classList.remove('is-invalid');
+            errorDiv.style.display = 'none';
+        }
+
+        // Cargar pacientes
+        function loadPatients() {
+            fetch('get_patients.php')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('paciente_id');
+                    select.innerHTML = '<option value="">Seleccionar paciente...</option>';
+                    data.forEach(patient => {
+                        const option = document.createElement('option');
+                        option.value = patient.id;
+                        const displayText = patient.identificacion ? 
+                            `${patient.nombre} ${patient.apellido} - ${patient.identificacion}` :
+                            `${patient.nombre} ${patient.apellido} - ${patient.email}`;
+                        option.textContent = displayText;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Cargar doctores
+        function loadDoctors() {
+            fetch('get_doctors.php')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('doctor_id');
+                    select.innerHTML = '<option value="">Seleccionar doctor...</option>';
+                    data.forEach(doctor => {
+                        const option = document.createElement('option');
+                        option.value = doctor.id;
+                        option.textContent = `Dr. ${doctor.nombre} ${doctor.apellido} - ${doctor.especialidad}`;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Configurar restricciones de fecha
+        function setupDateRestrictions() {
+            const fechaInput = document.getElementById('fecha_cita');
+            const today = new Date().toISOString().split('T')[0];
+            fechaInput.min = today;
+            
+            // Cargar horarios disponibles cuando cambie la fecha o doctor
+            fechaInput.addEventListener('change', loadAvailableHours);
+            document.getElementById('doctor_id').addEventListener('change', loadAvailableHours);
+        }
+
+        // Cargar horarios disponibles
+        function loadAvailableHours() {
+            const doctorId = document.getElementById('doctor_id').value;
+            const fecha = document.getElementById('fecha_cita').value;
+            
+            if (!doctorId || !fecha) return;
+            
+            fetch(`get_available_hours.php?doctor_id=${doctorId}&fecha=${fecha}`)
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('hora_cita');
+                    select.innerHTML = '<option value="">Seleccionar hora...</option>';
+                    data.forEach(hour => {
+                        const option = document.createElement('option');
+                        option.value = hour;
+                        option.textContent = hour;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Crear cita
+        document.getElementById('createAppointmentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            formData.append('action', 'create_appointment');
+            
+            fetch('create_appointment.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Cita creada exitosamente');
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al crear la cita');
+            });
+        });
+
+        // Registrar paciente
+        document.getElementById('registerPatientForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Verificar si hay error de identificación
+            const identificacionInput = document.getElementById('identificacion_paciente');
+            if (identificacionInput.classList.contains('is-invalid')) {
+                alert('La identificación ya está registrada. Por favor, use una identificación diferente.');
+                return;
+            }
+            
+            const formData = new FormData(this);
+            formData.append('action', 'register_patient');
+            
+            fetch('register_patient.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Paciente registrado exitosamente');
+                    loadPatients(); // Recargar lista de pacientes
+                    document.getElementById('paciente_id').value = data.patient_id;
+                    bootstrap.Modal.getInstance(document.getElementById('registerPatientModal')).hide();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al registrar el paciente');
+            });
+        });
     </script>
 </body>
 </html>

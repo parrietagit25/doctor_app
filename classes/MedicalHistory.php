@@ -39,16 +39,26 @@ class MedicalHistory {
 
     // Crear historial médico
     public function crear() {
-        $query = "INSERT INTO " . $this->table_name . " 
-                  (paciente_id, doctor_id, cita_id, diagnostico, tratamiento, medicamentos, notas_adicionales) 
-                  VALUES (:paciente_id, :doctor_id, :cita_id, :diagnostico, :tratamiento, :medicamentos, :notas_adicionales)";
+        // Determinar si hay una cita asociada
+        $hasCita = !empty($this->cita_id) && $this->cita_id !== '';
+        
+        if ($hasCita) {
+            // Si hay cita_id, incluirla en la consulta
+            $query = "INSERT INTO " . $this->table_name . " 
+                      (paciente_id, doctor_id, cita_id, diagnostico, tratamiento, medicamentos, notas_adicionales) 
+                      VALUES (:paciente_id, :doctor_id, :cita_id, :diagnostico, :tratamiento, :medicamentos, :notas_adicionales)";
+        } else {
+            // Si no hay cita_id, usar NULL
+            $query = "INSERT INTO " . $this->table_name . " 
+                      (paciente_id, doctor_id, cita_id, diagnostico, tratamiento, medicamentos, notas_adicionales) 
+                      VALUES (:paciente_id, :doctor_id, NULL, :diagnostico, :tratamiento, :medicamentos, :notas_adicionales)";
+        }
 
         $stmt = $this->conn->prepare($query);
 
         // Sanitizar datos
         $this->paciente_id = htmlspecialchars(strip_tags($this->paciente_id));
         $this->doctor_id = htmlspecialchars(strip_tags($this->doctor_id));
-        $this->cita_id = htmlspecialchars(strip_tags($this->cita_id));
         $this->diagnostico = htmlspecialchars(strip_tags($this->diagnostico));
         $this->tratamiento = htmlspecialchars(strip_tags($this->tratamiento));
         $this->medicamentos = htmlspecialchars(strip_tags($this->medicamentos));
@@ -57,7 +67,10 @@ class MedicalHistory {
         // Bind parameters
         $stmt->bindParam(':paciente_id', $this->paciente_id);
         $stmt->bindParam(':doctor_id', $this->doctor_id);
-        $stmt->bindParam(':cita_id', $this->cita_id);
+        if ($hasCita) {
+            $this->cita_id = htmlspecialchars(strip_tags($this->cita_id));
+            $stmt->bindParam(':cita_id', $this->cita_id);
+        }
         $stmt->bindParam(':diagnostico', $this->diagnostico);
         $stmt->bindParam(':tratamiento', $this->tratamiento);
         $stmt->bindParam(':medicamentos', $this->medicamentos);

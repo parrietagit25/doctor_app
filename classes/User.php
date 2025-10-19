@@ -9,6 +9,7 @@ class User {
     public $nombre;
     public $apellido;
     public $email;
+    public $identificacion;
     public $telefono;
     public $password;
     public $tipo_usuario;
@@ -23,8 +24,8 @@ class User {
     // Crear nuevo usuario
     public function crear() {
         $query = "INSERT INTO " . $this->table_name . " 
-                  (nombre, apellido, email, telefono, password, tipo_usuario, especialidad) 
-                  VALUES (:nombre, :apellido, :email, :telefono, :password, :tipo_usuario, :especialidad)";
+                  (nombre, apellido, email, identificacion, telefono, password, tipo_usuario, especialidad) 
+                  VALUES (:nombre, :apellido, :email, :identificacion, :telefono, :password, :tipo_usuario, :especialidad)";
 
         $stmt = $this->conn->prepare($query);
 
@@ -32,6 +33,7 @@ class User {
         $this->nombre = htmlspecialchars(strip_tags($this->nombre));
         $this->apellido = htmlspecialchars(strip_tags($this->apellido));
         $this->email = htmlspecialchars(strip_tags($this->email));
+        $this->identificacion = htmlspecialchars(strip_tags($this->identificacion));
         $this->telefono = htmlspecialchars(strip_tags($this->telefono));
         $this->password = password_hash($this->password, PASSWORD_DEFAULT);
         $this->tipo_usuario = htmlspecialchars(strip_tags($this->tipo_usuario));
@@ -41,6 +43,7 @@ class User {
         $stmt->bindParam(':nombre', $this->nombre);
         $stmt->bindParam(':apellido', $this->apellido);
         $stmt->bindParam(':email', $this->email);
+        $stmt->bindParam(':identificacion', $this->identificacion);
         $stmt->bindParam(':telefono', $this->telefono);
         $stmt->bindParam(':password', $this->password);
         $stmt->bindParam(':tipo_usuario', $this->tipo_usuario);
@@ -48,6 +51,41 @@ class User {
 
         if($stmt->execute()) {
             return true;
+        }
+        return false;
+    }
+
+    // Crear paciente sin autenticación (para doctores y administradores)
+    public function crearPaciente() {
+        $query = "INSERT INTO " . $this->table_name . " 
+                  (nombre, apellido, email, identificacion, telefono, password, tipo_usuario, especialidad) 
+                  VALUES (:nombre, :apellido, :email, :identificacion, :telefono, :password, :tipo_usuario, :especialidad)";
+
+        $stmt = $this->conn->prepare($query);
+
+        // Sanitizar datos
+        $this->nombre = htmlspecialchars(strip_tags($this->nombre));
+        $this->apellido = htmlspecialchars(strip_tags($this->apellido));
+        $this->email = htmlspecialchars(strip_tags($this->email));
+        $this->identificacion = htmlspecialchars(strip_tags($this->identificacion));
+        $this->telefono = htmlspecialchars(strip_tags($this->telefono));
+        // Generar password temporal para pacientes creados por doctores/admin
+        $this->password = password_hash('temp_password_' . time(), PASSWORD_DEFAULT);
+        $this->tipo_usuario = 'paciente';
+        $this->especialidad = null;
+
+        // Bind parameters
+        $stmt->bindParam(':nombre', $this->nombre);
+        $stmt->bindParam(':apellido', $this->apellido);
+        $stmt->bindParam(':email', $this->email);
+        $stmt->bindParam(':identificacion', $this->identificacion);
+        $stmt->bindParam(':telefono', $this->telefono);
+        $stmt->bindParam(':password', $this->password);
+        $stmt->bindParam(':tipo_usuario', $this->tipo_usuario);
+        $stmt->bindParam(':especialidad', $this->especialidad);
+
+        if($stmt->execute()) {
+            return $this->conn->lastInsertId(); // Retornar el ID del paciente creado
         }
         return false;
     }
@@ -157,6 +195,43 @@ class User {
 
         if($stmt->execute()) {
             return true;
+        }
+        return false;
+    }
+
+    // Verificar si la identificación ya existe
+    public function verificarIdentificacion($identificacion) {
+        $query = "SELECT id FROM " . $this->table_name . " 
+                  WHERE identificacion = :identificacion AND activo = 1";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':identificacion', $identificacion);
+        $stmt->execute();
+
+        return $stmt->rowCount() > 0;
+    }
+
+    // Obtener usuario por identificación
+    public function obtenerPorIdentificacion($identificacion) {
+        $query = "SELECT id, nombre, apellido, email, identificacion, telefono, tipo_usuario, especialidad 
+                  FROM " . $this->table_name . " 
+                  WHERE identificacion = :identificacion AND activo = 1";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':identificacion', $identificacion);
+        $stmt->execute();
+
+        if($stmt->rowCount() > 0) {
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $this->id = $row['id'];
+            $this->nombre = $row['nombre'];
+            $this->apellido = $row['apellido'];
+            $this->email = $row['email'];
+            $this->identificacion = $row['identificacion'];
+            $this->telefono = $row['telefono'];
+            $this->tipo_usuario = $row['tipo_usuario'];
+            $this->especialidad = $row['especialidad'];
+            return $this;
         }
         return false;
     }

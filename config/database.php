@@ -2,14 +2,14 @@
 // Configuración de la base de datos
 class Database {
     private $host = 'localhost';
-    /*
+    
     private $db_name = 'doctor_app';
     private $username = 'root';
     private $password = '';
-    */
+   /*
     private $db_name = 'dbshyv4jxx5zzw';
     private $username = 'ucgdhgnnhiqwf';
-    private $password = 'Chicho1787$$$';
+    private $password = 'Chicho1787$$$'; */
     private $conn;
 
     public function getConnection() {
