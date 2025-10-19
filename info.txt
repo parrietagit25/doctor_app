@@ -1,0 +1,54 @@
+necesito hacer un proyecto
+
+de citas medicas, 
+
+tecologias a usar
+- php
+- mysql
+- boostrap: para el responsive diseño
+- html
+- js
+
+tendra 3 tipos de usuarios 
+
+- administrador
+- doctor
+- paciente 
+
+tiene que ser una pagina informativa 
+desde la misma pagina se ara la cita 
+
+sera un formulario donde se seleccionara 
+el medico(usuario medico previamente registrado) 
+y la fecha de la cita y la hora 
+y un comentario, donde puede describir la razon
+de la cita, sintomas etc
+
+cuando el cliente(usuario cliente previamenet registrado)
+registre una cita medica, se enviara un correo al medico 
+indicando que tiene una cita, con los detalles de la cita 
+
+cada uno de los usuarios tendra una zona administrativa
+
+el suario administrador podra ver todos los usuarios registrados y registrar
+editar o eliminar usuairos 
+
+el administrador, podra llevar un historial medico de cada paciente, 
+podra crear pacientes y asignarle citas a los doctores 
+
+el usuario doctor podra ver solo los pacientes, asignados a el 
+
+en la consulta creada, se podran abjuntar imagenes y fotos
+ y comentarios del doctor, tambien cambiar de status, 
+ el usuario doctor puede enviarle los resultado por correo 
+ al usuairo cliente 
+
+ cuando se crea en status "cita creada" 
+ despues de la cita, "cita realizada" si el usuairo 
+ no se presenta a la cita "no se presento a la cita"
+ si el usuario cancela "cita cancelada"
+
+todas las citas disponibles estara reflejada en una tabla 
+desde el usuario administrador se veran todas el usuario paciente 
+solo puede ver las que el creo o las que el admin creo y el susuario doctor 
+solo puede ver las asignadas a el 
